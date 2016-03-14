@@ -1,3 +1,4 @@
+import json
 from flask import Blueprint, request
 from views.response_json import response
 
@@ -8,7 +9,11 @@ forum = Blueprint("forum", __name__)
 @forum.route("/create")
 def create():
     # TODO
-    return response(0, 'OK')
+    params = json.loads(request.data)
+    if params['name'] and params['short_name'] and params['user']:
+        return response(0, 'OK')
+    else:
+        return 'bad'
 
 
 @forum.route("/details/", methods=['GET'])
