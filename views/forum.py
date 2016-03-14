@@ -17,7 +17,6 @@ def create():
 
 
 @forum.route("/details/", methods=['GET'])
-# @forum.route("/details/")
 def details():
     # TODO
 
@@ -31,8 +30,7 @@ def details():
         return 'bad'
 
 
-# @forum.route("/listThreads/", methods=['GET'])
-@forum.route("/listThreads/")
+@forum.route("/listThreads/", methods=['GET'])
 def list_threads():
     # TODO
 
@@ -49,8 +47,7 @@ def list_threads():
         return 'bad'
 
 
-# @forum.route("/listUsers/", methods=['GET'])
-@forum.route("/listUsers/")
+@forum.route("/listUsers/", methods=['GET'])
 def list_users():
     # TODO
     forum_name = request.args.get("forum")
