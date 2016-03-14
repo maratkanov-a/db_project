@@ -31,7 +31,7 @@ def details():
 
 
 @post.route("/list/", methods=['GET'])
-def list():
+def list_posts():
     # TODO
 
     forum_name = request.args.get("forum")
@@ -49,6 +49,19 @@ def list():
 
 # @post.route("/remove", methods=['POST'])
 @post.route("/remove")
+def remove():
+
+    params = json.loads(request.data)
+
+    if params['post']:
+        # TODO
+        return response(0, 'good')
+    else:
+        return 'bad'
+
+
+# @post.route("/restore", methods=['POST'])
+@post.route("/restore")
 def remove():
 
     params = json.loads(request.data)
