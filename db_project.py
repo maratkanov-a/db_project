@@ -9,6 +9,7 @@ API = '/db/api'
 app.register_blueprint(common, url_prefix=API)
 app.register_blueprint(forum, url_prefix=API+'/forum')
 app.register_blueprint(post, url_prefix=API+'/post')
+app.register_blueprint(post, url_prefix=API+'/user')
 
 
 @app.route('/')

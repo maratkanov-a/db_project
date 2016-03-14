@@ -8,9 +8,10 @@ forum = Blueprint("forum", __name__)
 # @forum.route("/create", methods=['POST'])
 @forum.route("/create")
 def create():
-    # TODO
+
     params = json.loads(request.data)
     if params['name'] and params['short_name'] and params['user']:
+        # TODO
         return response(0, 'OK')
     else:
         return 'bad'
@@ -18,13 +19,12 @@ def create():
 
 @forum.route("/details/", methods=['GET'])
 def details():
-    # TODO
 
     forum_name = request.args.get("forum")
 
     if forum_name:
         related = request.args.getlist('related')
-
+        # TODO
         return response(0, 'good')
     else:
         return 'bad'
@@ -32,7 +32,6 @@ def details():
 
 @forum.route("/listThreads/", methods=['GET'])
 def list_threads():
-    # TODO
 
     forum_name = request.args.get("forum")
 
@@ -41,7 +40,7 @@ def list_threads():
         limit = request.args.get("limit", type=int)
         order = request.args.get("order", default='desc')
         related = request.args.getlist('related')
-
+        # TODO
         return response(0, 'good')
     else:
         return 'bad'
@@ -49,14 +48,15 @@ def list_threads():
 
 @forum.route("/listUsers/", methods=['GET'])
 def list_users():
-    # TODO
+
     forum_name = request.args.get("forum")
 
     if forum_name:
         limit = request.args.get("limit", type=int)
         order = request.args.get("order", default='desc')
+        # TODO: границы
         since_id = request.args.getlist('since_id')
-
+        # TODO
         return response(0, 'good')
     else:
         return 'bad'
