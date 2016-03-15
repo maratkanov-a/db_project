@@ -1,5 +1,5 @@
 from flask import Blueprint
-from views.response_json import response
+from response_json import response
 
 common = Blueprint('common', __name__)
 

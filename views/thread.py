@@ -1,13 +1,13 @@
 import json
 from flask import Blueprint, request
-from views.response_json import response
+from response_json import response
 
 thread = Blueprint("thread", __name__)
 
 
 # @thread.route("/close", methods=['POST'])
 @thread.route("/close")
-def create():
+def close():
     params = json.loads(request.data)
 
     if params['thread']:
@@ -58,7 +58,7 @@ def list_threads():
 
 
 @thread.route("/listPosts/", methods=['GET'])
-def list_threads():
+def list_posts_threads():
 
     thread_id = request.args.get("thread")
 
@@ -75,7 +75,7 @@ def list_threads():
 
 # @thread.route("/open", methods=['POST'])
 @thread.route("/open")
-def remove():
+def open():
 
     params = json.loads(request.data)
 
@@ -101,7 +101,7 @@ def remove():
 
 # @thread.route("/restore", methods=['POST'])
 @thread.route("/restore")
-def remove():
+def restore():
 
     params = json.loads(request.data)
 
@@ -114,7 +114,7 @@ def remove():
 
 # @thread.route("/subscribe", methods=['POST'])
 @thread.route("/subscribe")
-def remove():
+def subscribe():
 
     params = json.loads(request.data)
 
@@ -127,7 +127,7 @@ def remove():
 
 # @thread.route("/unsubscribe", methods=['POST'])
 @thread.route("/unsubscribe")
-def remove():
+def unsubscribe():
 
     params = json.loads(request.data)
 
@@ -152,7 +152,7 @@ def update():
 
 # @thread.route("/vote", methods=['POST'])
 @thread.route("/vote")
-def update():
+def vote():
     params = json.loads(request.data)
 
     if params['thread'] and params['vote']:

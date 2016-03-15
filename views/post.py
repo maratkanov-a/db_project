@@ -62,7 +62,7 @@ def remove():
 
 # @post.route("/restore", methods=['POST'])
 @post.route("/restore")
-def remove():
+def restore():
 
     params = json.loads(request.data)
 
@@ -88,7 +88,7 @@ def update():
 
 # @post.route("/vote", methods=['POST'])
 @post.route("/vote")
-def update():
+def vote():
 
     params = json.loads(request.data)
 

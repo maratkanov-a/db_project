@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import json
 from flask import Blueprint, request
 from views.response_json import response
@@ -54,7 +55,7 @@ def list_users():
     if forum_name:
         limit = request.args.get("limit", type=int)
         order = request.args.get("order", default='desc')
-        # TODO: границы
+        # TODO: [since_id,last_id]
         since_id = request.args.getlist('since_id')
         # TODO
         return response(0, 'good')

@@ -51,7 +51,7 @@ def list_followers():
     if user_email:
         limit = request.args.get("limit", type=int)
         order = request.args.get("order", default='desc')
-        # TODO: границы
+        # TODO: [since_id,last_id]
         since_id = request.args.getlist('since_id')
         # TODO
         return response(0, 'good')
@@ -67,7 +67,7 @@ def list_following():
     if user_email:
         limit = request.args.get("limit", type=int)
         order = request.args.get("order", default='desc')
-        # TODO: границы
+        # TODO: [since_id,last_id]
         since_id = request.args.getlist('since_id')
         # TODO
         return response(0, 'good')
@@ -76,7 +76,7 @@ def list_following():
 
 
 @user.route("/listPosts/", methods=['GET'])
-def list_posts():
+def list_posts_users():
 
     user_email = request.args.get("user", type=str)
 
@@ -92,7 +92,7 @@ def list_posts():
 
 # @user.route("/unfollow", methods=['POST'])
 @user.route("/unfollow")
-def update():
+def unfollow():
 
     params = json.loads(request.data)
 
@@ -105,7 +105,7 @@ def update():
 
 # @user.route("/updateProfile", methods=['POST'])
 @user.route("/updateProfile")
-def update():
+def update_user():
 
     params = json.loads(request.data)
 
