@@ -241,6 +241,7 @@ def remove():
 
         c, conn = connection()
         c.execute(''' update Thread t set isDeleted=1 where t.id={} '''.format(params['thread']))
+        c.execute(''' update Post p set isDeleted=1 where p.thread={} '''.format(params['thread']))
 
         conn.close()
 
@@ -261,6 +262,7 @@ def restore():
 
         c, conn = connection()
         c.execute(''' update Thread t set isDeleted=0 where t.id={} '''.format(params['thread']))
+        c.execute(''' update Post p set isDeleted=0 where p.thread={} '''.format(params['thread']))
 
         conn.close()
 
