@@ -15,16 +15,20 @@ def user_tuple_to_dict(cursor, user):
         'email': user[2],
         'about': user[3],
         'username': user[1],
-        'id': user[0], 'name': user[4],
+        'id': user[0],
+        'name': user[4],
         'isAnonymous': true_or_false(user[5])
     }
-    cursor.execute('''select follower from Follow f where f.followee = '{}' '''.format(user[2]))
+    cursor.execute('''select f.follower from Follow f where f.followee = '{}' '''.format(user[2]))
     user_followers = cursor.fetchall()
-    cursor.execute('''select followee from Follow f where f.follower = '{}' '''.format(user[2]))
+    cursor.execute('''select f.followee from Follow f where f.follower = '{}' '''.format(user[2]))
     user_following = cursor.fetchall()
+    cursor.execute(''' select s.thread from Subscribe s where s.user='{}' '''.format(user[2]))
+    user_subscribtions = cursor.fetchall()
 
-    user_dict['followers'] = list(user_followers)
-    user_dict['following'] = list(user_following)
+    user_dict['followers'] = [email[0] for email in user_followers]
+    user_dict['following'] = [email[0] for email in user_following]
+    user_dict['subscriptions'] = [subs[0] for subs in user_subscribtions]
     return user_dict
 
 
@@ -96,8 +100,10 @@ def details():
         c.execute(''' select * from User u where u.email = '{}' '''.format(user_email))
         users_tuple = c.fetchall()
 
+        res = user_tuple_to_dict(c, users_tuple[0])
+
         conn.close()
-        return response(0, user_tuple_to_dict(c, users_tuple[0]))
+        return response(0, res)
     else:
         return response(4, 'Unknown error')
 
@@ -115,9 +121,11 @@ def follow():
         c.execute(''' select * from User u where u.email = '{}' '''.format(params['follower']))
         follow_tuple = c.fetchall()
 
+        res = user_tuple_to_dict(c, follow_tuple[0])
+
         conn.close()
 
-        return response(0, user_tuple_to_dict(c, follow_tuple[0]))
+        return response(0, res)
     else:
         return response(4, 'Unknown error')
 
