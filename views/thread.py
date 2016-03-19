@@ -1,39 +1,9 @@
 import json
 import MySQLdb
 from flask import Blueprint, request
-from response_json import response, connection, dictfetchall
+from response_json import response, connection, dictfetchall, true_or_false, fix_post_dict, fix_thread_dict
 
 thread = Blueprint("thread", __name__)
-
-
-def true_or_false(what):
-    if what == 0:
-        return False
-    else:
-        return True
-
-
-def fix_thread_dict(cursor):
-    threads_dict = dictfetchall(cursor)
-    for one_dict in threads_dict:
-        one_dict['isDeleted'] = true_or_false(one_dict['isDeleted'])
-        one_dict['isClosed'] = true_or_false(one_dict['isClosed'])
-        one_dict['date'] = str(one_dict['date'])
-
-    return threads_dict
-
-
-def fix_post_dict(cursor):
-    posts_dict = dictfetchall(cursor)
-    for one_dict in posts_dict:
-        one_dict['isHighlighted'] = true_or_false(one_dict['isHighlighted'])
-        one_dict['isApproved'] = true_or_false(one_dict['isApproved'])
-        one_dict['isEdited'] = true_or_false(one_dict['isEdited'])
-        one_dict['isSpam'] = true_or_false(one_dict['isSpam'])
-        one_dict['isDeleted'] = true_or_false(one_dict['isDeleted'])
-        one_dict['date'] = str(one_dict['date'])
-
-    return posts_dict
 
 
 @thread.route("/close", methods=['POST'])
@@ -69,14 +39,14 @@ def create():
     if params['forum'] and params['title'] and params['isClosed'] and params['user'] and params['date'] and params[
         'message'] and params['slug']:
 
-        if not params['isDeleted']:
+        if not params.get('isDeleted', None):
             params['isDeleted'] = 0
             is_deleted = False
         else:
             params['isDeleted'] = 1
             is_deleted = True
 
-        if params['isClosed'] == 'true':
+        if params.get('isClosed', None) == 'true':
             is_closed = 1
         else:
             is_closed = 0
@@ -96,7 +66,9 @@ def create():
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(1, 'Not Found')
+
         res = c.fetchall()
+
         thread_id = res[0][0]
 
         response_dict = {
@@ -154,10 +126,10 @@ def list_threads():
     order = request.args.get("order", default='desc')
 
     if order not in ['asc', 'desc']:
-            return response(3, 'Wrong order value')
+        return response(3, 'Wrong order value')
 
     if not limit:
-            limit = 18446744073709551615
+        limit = 18446744073709551615
 
     if user_email:
 
@@ -188,7 +160,7 @@ def list_threads():
         conn.close()
 
         return response(0, res)
-    elif user_email and user_email:
+    elif forum_name and user_email:
 
         c, conn = connection()
         try:
@@ -399,6 +371,7 @@ def update():
 
 @thread.route("/vote", methods=['POST'])
 def vote():
+
     params = json.loads(request.data)
 
     if params['thread'] and params['vote']:

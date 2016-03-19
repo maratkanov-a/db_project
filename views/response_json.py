@@ -23,8 +23,6 @@ def true_or_false(what):
         return False
     elif what == 1:
         return True
-    else:
-        return what
 
 
 def dictfetchall(cursor):
@@ -32,3 +30,26 @@ def dictfetchall(cursor):
     desc = cursor.description
     return [dict(itertools.izip([col[0] for col in desc], row))
             for row in cursor.fetchall()]
+
+
+def fix_post_dict(cursor):
+    posts_dict = dictfetchall(cursor)
+    for one_dict in posts_dict:
+        one_dict['isHighlighted'] = true_or_false(one_dict['isHighlighted'])
+        one_dict['isApproved'] = true_or_false(one_dict['isApproved'])
+        one_dict['isEdited'] = true_or_false(one_dict['isEdited'])
+        one_dict['isSpam'] = true_or_false(one_dict['isSpam'])
+        one_dict['isDeleted'] = true_or_false(one_dict['isDeleted'])
+        one_dict['date'] = str(one_dict['date'])
+
+    return posts_dict
+
+
+def fix_thread_dict(cursor):
+    threads_dict = dictfetchall(cursor)
+    for one_dict in threads_dict:
+        one_dict['isDeleted'] = true_or_false(one_dict['isDeleted'])
+        one_dict['isClosed'] = true_or_false(one_dict['isClosed'])
+        one_dict['date'] = str(one_dict['date'])
+
+    return threads_dict
