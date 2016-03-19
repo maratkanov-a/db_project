@@ -1,4 +1,5 @@
 import json
+import MySQLdb
 from flask import Blueprint, request
 from response_json import response, connection, dictfetchall
 
@@ -34,14 +35,20 @@ def fix_post_dict(cursor):
 
     return posts_dict
 
+
 @thread.route("/close", methods=['POST'])
 def close():
+
     params = json.loads(request.data)
 
     if params['thread']:
 
         c, conn = connection()
-        c.execute(''' update Thread t set isClosed=1 where t.id={} '''.format(params['thread']))
+        try:
+            c.execute(''' update Thread t set isClosed=1 where t.id={} '''.format(params['thread']))
+        except (MySQLdb.Error, MySQLdb.Warning):
+            conn.close()
+            return response(1, 'Not Found')
 
         conn.close()
 
@@ -51,11 +58,12 @@ def close():
 
         return response(0, res)
     else:
-        return response(4, 'Unknown error')
+        return response(2, 'Invalid request')
 
 
 @thread.route("/create", methods=['POST'])
 def create():
+
     params = json.loads(request.data)
 
     if params['forum'] and params['title'] and params['isClosed'] and params['user'] and params['date'] and params[
@@ -74,11 +82,20 @@ def create():
             is_closed = 0
 
         c, conn = connection()
-        c.execute(
+        try:
+            c.execute(
             '''insert into `Thread` (`forum`, `title`, `user`, `date`, `message`, `slug`, `isDeleted`, `isClosed`, `dislikes`, `likes`, `points`, `posts`) values ('{}', '{}','{}','{}','{}','{}','{}','{}','{}','{}','{}','{}') '''.format(
                 params['forum'], params['title'], params['user'], params['date'], params['message'], params['slug'], params['isDeleted'],
                 is_closed, 0, 0, 0, 0))
-        c.execute(''' select id from Thread t where t.date='{}' '''.format(params['date']))
+        except (MySQLdb.Error, MySQLdb.Warning):
+            conn.close()
+            return response(4, 'Unknown error')
+
+        try:
+            c.execute(''' select id from Thread t where t.date='{}' '''.format(params['date']))
+        except (MySQLdb.Error, MySQLdb.Warning):
+            conn.close()
+            return response(1, 'Not Found')
         res = c.fetchall()
         thread_id = res[0][0]
 
@@ -98,20 +115,24 @@ def create():
 
         return response(0, response_dict)
     else:
-        return response(4, 'Unknown error')
+        return response(2, 'Invalid request')
 
 
 @thread.route("/details/", methods=['GET'])
 def details():
 
-    thread_id = request.args.get("thread", type=int)
+    thread_id = request.args.get("thread", type=int, default=None)
 
     if thread_id:
         # WTF!!!!!!!!!!!!!!!!!!
         related = request.args.getlist('related')
 
         c, conn = connection()
-        c.execute(''' select * from Thread t where t.id='{}' '''.format(thread_id))
+        try:
+            c.execute(''' select * from Thread t where t.id='{}' '''.format(thread_id))
+        except (MySQLdb.Error, MySQLdb.Warning):
+            conn.close()
+            return response(1, 'Not Found')
 
         res = fix_thread_dict(c)
 
@@ -119,7 +140,7 @@ def details():
 
         return response(0, res)
     else:
-        return response(4, 'Unknown error')
+        return response(2, 'Invalid request')
 
 
 @thread.route("/list/", methods=['GET'])
@@ -141,7 +162,11 @@ def list_threads():
     if user_email:
 
         c, conn = connection()
-        c.execute(''' select * from Thread t where t.user='{}' and t.date > '{}' order by t.date {} limit {} '''.format(user_email, since, order, limit))
+        try:
+            c.execute(''' select * from Thread t where t.user='{}' and t.date > '{}' order by t.date {} limit {} '''.format(user_email, since, order, limit))
+        except (MySQLdb.Error, MySQLdb.Warning):
+            conn.close()
+            return response(1, 'Not Found')
 
         res = fix_thread_dict(c)
 
@@ -152,7 +177,11 @@ def list_threads():
     elif forum_name:
 
         c, conn = connection()
-        c.execute(''' select * from Thread t where t.forum='{}' and t.date > '{}' order by t.date {} limit {} '''.format(forum_name, since, order, limit))
+        try:
+            c.execute(''' select * from Thread t where t.forum='{}' and t.date > '{}' order by t.date {} limit {} '''.format(forum_name, since, order, limit))
+        except (MySQLdb.Error, MySQLdb.Warning):
+            conn.close()
+            return response(1, 'Not Found')
 
         res = fix_thread_dict(c)
 
@@ -162,7 +191,11 @@ def list_threads():
     elif user_email and user_email:
 
         c, conn = connection()
-        c.execute(''' select * from Thread t where t.user='{}' and t.forum='{}' and t.date > '{}' order by t.date {} limit {} '''.format(user_email, forum_name, since, order, limit))
+        try:
+            c.execute(''' select * from Thread t where t.user='{}' and t.forum='{}' and t.date > '{}' order by t.date {} limit {} '''.format(user_email, forum_name, since, order, limit))
+        except (MySQLdb.Error, MySQLdb.Warning):
+            conn.close()
+            return response(1, 'Not Found')
 
         res = fix_thread_dict(c)
 
@@ -170,7 +203,7 @@ def list_threads():
 
         return response(0, res)
     else:
-        return response(4, 'Unknown error')
+        return response(2, 'Invalid request')
 
 
 @thread.route("/listPosts/", methods=['GET'])
@@ -201,7 +234,11 @@ def list_posts_threads():
     if thread_id:
 
         c, conn = connection()
-        c.execute(''' select * from Post p where p.thread={} and p.date>'{}' {} limit {} '''.format(thread_id, since, sort_str, limit))
+        try:
+            c.execute(''' select * from Post p where p.thread={} and p.date>'{}' {} limit {} '''.format(thread_id, since, sort_str, limit))
+        except (MySQLdb.Error, MySQLdb.Warning):
+            conn.close()
+            return response(1, 'Not Found')
 
         res = fix_post_dict(c)
 
@@ -209,7 +246,7 @@ def list_posts_threads():
 
         return response(0, res)
     else:
-        return response(4, 'Unknown error')
+        return response(2, 'Invalid request')
 
 
 @thread.route("/open", methods=['POST'])
@@ -220,7 +257,11 @@ def open():
     if params['thread']:
 
         c, conn = connection()
-        c.execute(''' update Thread t set isClosed=0 where t.id={} '''.format(params['thread']))
+        try:
+            c.execute(''' update Thread t set isClosed=0 where t.id={} '''.format(params['thread']))
+        except (MySQLdb.Error, MySQLdb.Warning):
+            conn.close()
+            return response(4, 'Unknown error')
 
         conn.close()
 
@@ -230,7 +271,7 @@ def open():
 
         return response(0, res)
     else:
-        return response(4, 'Unknown error')
+        return response(2, 'Invalid request')
 
 
 @thread.route("/remove", methods=['POST'])
@@ -240,8 +281,12 @@ def remove():
     if params['thread']:
 
         c, conn = connection()
-        c.execute(''' update Thread t set isDeleted=1 where t.id={} '''.format(params['thread']))
-        c.execute(''' update Post p set isDeleted=1 where p.thread={} '''.format(params['thread']))
+        try:
+            c.execute(''' update Thread t set isDeleted=1 where t.id={} '''.format(params['thread']))
+            c.execute(''' update Post p set isDeleted=1 where p.thread={} '''.format(params['thread']))
+        except (MySQLdb.Error, MySQLdb.Warning):
+            conn.close()
+            return response(4, 'Unknown error')
 
         conn.close()
 
@@ -251,18 +296,23 @@ def remove():
 
         return response(0, res)
     else:
-        return response(4, 'Unknown error')
+        return response(2, 'Invalid request')
 
 
 @thread.route("/restore", methods=['POST'])
 def restore():
+
     params = json.loads(request.data)
 
     if params['thread']:
 
         c, conn = connection()
-        c.execute(''' update Thread t set isDeleted=0 where t.id={} '''.format(params['thread']))
-        c.execute(''' update Post p set isDeleted=0 where p.thread={} '''.format(params['thread']))
+        try:
+            c.execute(''' update Thread t set isDeleted=0 where t.id={} '''.format(params['thread']))
+            c.execute(''' update Post p set isDeleted=0 where p.thread={} '''.format(params['thread']))
+        except (MySQLdb.Error, MySQLdb.Warning):
+            conn.close()
+            return response(4, 'Unknown error')
 
         conn.close()
 
@@ -272,7 +322,7 @@ def restore():
 
         return response(0, res)
     else:
-        return response(4, 'Unknown error')
+        return response(2, 'Invalid request')
 
 
 @thread.route("/subscribe", methods=['POST'])
@@ -283,7 +333,11 @@ def subscribe():
     if params['thread'] and params['user']:
 
         c, conn = connection()
-        c.execute(''' insert into `Subscribe` (`thread`, `user`) values ('{}', '{}') '''.format(params['thread'], params['user']))
+        try:
+            c.execute(''' insert into `Subscribe` (`thread`, `user`) values ('{}', '{}') '''.format(params['thread'], params['user']))
+        except (MySQLdb.Error, MySQLdb.Warning):
+            conn.close()
+            return response(4, 'Unknown error')
 
         conn.close()
 
@@ -294,7 +348,7 @@ def subscribe():
 
         return response(0, res)
     else:
-        return response(4, 'Unknown error')
+        return response(2, 'Invalid request')
 
 
 @thread.route("/unsubscribe", methods=['POST'])
@@ -304,7 +358,11 @@ def unsubscribe():
     if params['thread'] and params['user']:
 
         c, conn = connection()
-        c.execute(''' delete from Subscribe where thread={} and user='{}' '''.format(params['thread'], params['user']))
+        try:
+            c.execute(''' delete from Subscribe where thread={} and user='{}' '''.format(params['thread'], params['user']))
+        except (MySQLdb.Error, MySQLdb.Warning):
+            conn.close()
+            return response(4, 'Unknown error')
 
         conn.close()
 
@@ -315,7 +373,7 @@ def unsubscribe():
 
         return response(0, res)
     else:
-        return response(4, 'Unknown error')
+        return response(2, 'Invalid request')
 
 
 @thread.route("/update", methods=['POST'])
@@ -325,14 +383,18 @@ def update():
     if params['message'] and params['slug'] and params['thread']:
 
         c, conn = connection()
-        c.execute(''' update Thread t set message='{}', slug='{}' where t.id={} '''.format(params['message'], params['slug'], params['thread']))
-        c.execute(''' select * from Thread t where t.id={} '''.format(params['thread']))
+        try:
+            c.execute(''' update Thread t set message='{}', slug='{}' where t.id={} '''.format(params['message'], params['slug'], params['thread']))
+            c.execute(''' select * from Thread t where t.id={} '''.format(params['thread']))
+        except (MySQLdb.Error, MySQLdb.Warning):
+            conn.close()
+            return response(1, 'Not Found')
 
         res = fix_thread_dict(c)
 
         return response(0, res)
     else:
-        return response(4, 'Unknown error')
+        return response(2, 'Invalid request')
 
 
 @thread.route("/vote", methods=['POST'])
@@ -345,14 +407,19 @@ def vote():
             return response(3, 'Wrong vote value')
 
         c, conn = connection()
-        if params['vote'] == -1:
-            c.execute(''' update Thread t set dislikes=dislikes+1 where t.id={} '''.format(params['thread']))
-        else:
-            c.execute(''' update Thread t set likes=likes+1 where t.id={} '''.format(params['thread']))
-        c.execute(''' select * from Thread t where t.id={} '''.format(params['thread']))
+        try:
+            if params['vote'] == -1:
+                c.execute(''' update Thread t set dislikes=dislikes+1 where t.id={} '''.format(params['thread']))
+            else:
+                c.execute(''' update Thread t set likes=likes+1 where t.id={} '''.format(params['thread']))
 
-        res = res = fix_thread_dict(c)
+            c.execute(''' select * from Thread t where t.id={} '''.format(params['thread']))
+        except (MySQLdb.Error, MySQLdb.Warning):
+            conn.close()
+            return response(1, 'Not Found')
+
+        res = fix_thread_dict(c)
 
         return response(0, res)
     else:
-        return response(4, 'Unknown error')
+        return response(2, 'Invalid request')
