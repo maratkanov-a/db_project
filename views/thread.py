@@ -96,7 +96,6 @@ def details():
     thread_id = request.args.get("thread", type=int, default=None)
 
     if thread_id:
-        # WTF!!!!!!!!!!!!!!!!!!
         related = request.args.getlist('related')
 
         c, conn = connection()
@@ -106,7 +105,7 @@ def details():
             conn.close()
             return response(1, 'Not Found')
 
-        res = fix_thread_dict(c)
+        res = fix_thread_dict(c, related)
 
         conn.close()
 
@@ -142,7 +141,7 @@ def list_threads():
             conn.close()
             return response(1, 'Not Found')
 
-        res = fix_thread_dict(c)
+        res = fix_thread_dict(c, [])
 
         conn.close()
 
@@ -157,7 +156,7 @@ def list_threads():
             conn.close()
             return response(1, 'Not Found')
 
-        res = fix_thread_dict(c)
+        res = fix_thread_dict(c, [])
 
         conn.close()
 
@@ -171,7 +170,7 @@ def list_threads():
             conn.close()
             return response(1, 'Not Found')
 
-        res = fix_thread_dict(c)
+        res = fix_thread_dict(c, [])
 
         conn.close()
 
@@ -366,7 +365,7 @@ def update():
             conn.close()
             return response(1, 'Not Found')
 
-        res = fix_thread_dict(c)
+        res = fix_thread_dict(c, [])
 
         return response(0, res)
     else:
@@ -395,7 +394,7 @@ def vote():
             conn.close()
             return response(1, 'Not Found')
 
-        res = fix_thread_dict(c)
+        res = fix_thread_dict(c, [])
 
         return response(0, res)
     else:

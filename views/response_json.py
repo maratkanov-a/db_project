@@ -54,18 +54,29 @@ def fix_post_dict(cursor, related):
                 one_dict['forum'] = forum_dict
 
         if 'thread' in related and cursor.execute('''select * from Thread t where t.user='{}' '''.format(user)):
-            thread_dict = fix_thread_dict(cursor)
+            thread_dict = fix_thread_dict(cursor, [])
             one_dict['thread'] = thread_dict[0]
 
     return posts_dict
 
 
-def fix_thread_dict(cursor):
+def fix_thread_dict(cursor, related):
     threads_dict = dictfetchall(cursor)
     for one_dict in threads_dict:
+        user = one_dict['user']
         one_dict['isDeleted'] = true_or_false(one_dict['isDeleted'])
         one_dict['isClosed'] = true_or_false(one_dict['isClosed'])
         one_dict['date'] = str(one_dict['date'])
+
+        if 'user' in related and cursor.execute(''' select * from User u where u.email='{}' '''.format(user)):
+            user_dict = fix_user_dict(cursor)
+            one_dict['user'] = user_dict
+
+        if 'forum' in related:
+            forum = one_dict['forum']
+            if cursor.execute('''select * from Forum f where f.short_name='{}' '''.format(forum)):
+                forum_dict = fix_forum_dict(cursor, [])
+                one_dict['forum'] = forum_dict
 
     return threads_dict
 
