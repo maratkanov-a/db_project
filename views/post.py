@@ -1,7 +1,7 @@
 import json
 import MySQLdb
 from flask import Blueprint, request
-from views.response_json import response, connection, fix_post_dict
+from views.response_json import *
 
 post = Blueprint("post", __name__)
 
@@ -62,7 +62,7 @@ def create():
             conn.close()
             return response(1, 'Not Found')
 
-        res = fix_post_dict(c)
+        res = fix_post_dict(c, [])
 
         conn.close()
 
@@ -98,33 +98,31 @@ def details():
 
 @post.route("/list/", methods=['GET'])
 def list_posts():
-    # TODO
 
     forum_name = request.args.get("forum", type=str, default=None)
     thread_id = request.args.get("thread", type=int, default=None)
 
-    since = request.args.get("since", type=str, default='1981-01-01 00:00:00')
+    since = request.args.get("since", type=str, default=None)
     limit = request.args.get("limit", type=int, default=None)
     order = request.args.get("order", default='desc')
 
     if order not in ['asc', 'desc']:
         return response(3, 'Wrong order value')
 
-    if limit:
-        limit_str = 'limit {}'.format(limit)
-    else:
-        limit_str = ''
+    limit_str = check_limit(limit)
+
+    since_str = check_since(since)
 
     if thread_id:
 
         c, conn = connection()
         try:
-            c.execute(''' select * from Post p where p.thread='{}' and p.date > '{}' order by p.date {} {} '''.format(thread_id, since, order, limit_str))
+            c.execute(''' select * from Post p where p.thread='{}' {} order by p.date {} {} '''.format(thread_id, since_str, order, limit_str))
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(1, 'Not Found')
 
-        res = fix_post_dict(c)
+        res = fix_post_dict(c, [])
 
         conn.close()
 
@@ -134,12 +132,12 @@ def list_posts():
 
         c, conn = connection()
         try:
-            c.execute(''' select * from Post p where p.forum='{}' and p.date > '{}' order by p.date {} {} '''.format(forum_name, since, order, limit_str))
+            c.execute(''' select * from Post p where p.forum='{}' and p.date > '{}' order by p.date {} {} '''.format(forum_name, since_str, order, limit_str))
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(1, 'Not Found')
 
-        res = fix_post_dict(c)
+        res = fix_post_dict(c, [])
 
         conn.close()
 
@@ -149,12 +147,12 @@ def list_posts():
 
         c, conn = connection()
         try:
-            c.execute(''' select * from Post p where p.thread='{}' and p.forum='{}' and t.date > '{}' order by t.date {} {} '''.format(thread_id, forum_name, since, order, limit_str))
+            c.execute(''' select * from Post p where p.thread='{}' and p.forum='{}' and t.date > '{}' order by t.date {} {} '''.format(thread_id, forum_name, since_str, order, limit_str))
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(1, 'Not Found')
 
-        res = fix_post_dict(c)
+        res = fix_post_dict(c, [])
 
         conn.close()
 
@@ -227,7 +225,7 @@ def update():
             conn.close()
             return response(1, 'Not Found')
 
-        res = fix_post_dict(c)
+        res = fix_post_dict(c, [])
 
         return response(0, res[0])
     else:
@@ -255,7 +253,7 @@ def vote():
             conn.close()
             return response(1, 'Not Found')
 
-        res = fix_post_dict(c)
+        res = fix_post_dict(c, [])
 
         return response(0, res[0])
     else:

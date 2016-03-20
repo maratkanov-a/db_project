@@ -45,7 +45,7 @@ def fix_post_dict(cursor, related):
 
         if 'user' in related and cursor.execute(''' select * from User u where u.email='{}' '''.format(user)):
             user_dict = fix_user_dict(cursor)
-            one_dict['user'] = user_dict
+            one_dict['user'] = user_dict[0]
 
         if 'forum' in related:
             forum = one_dict['forum']
@@ -70,7 +70,7 @@ def fix_thread_dict(cursor, related):
 
         if 'user' in related and cursor.execute(''' select * from User u where u.email='{}' '''.format(user)):
             user_dict = fix_user_dict(cursor)
-            one_dict['user'] = user_dict
+            one_dict['user'] = user_dict[0]
 
         if 'forum' in related:
             forum = one_dict['forum']
@@ -83,19 +83,20 @@ def fix_thread_dict(cursor, related):
 
 def fix_user_dict(cursor):
 
-    user_dict = dictfetchall(cursor)[0]
-    user_dict['isAnonymous'] = true_or_false(user_dict['isAnonymous'])
+    user_dict = dictfetchall(cursor)
+    for one_dict in user_dict:
+        one_dict['isAnonymous'] = true_or_false(one_dict['isAnonymous'])
 
-    cursor.execute('''select f.follower from Follow f where f.followee = '{}' '''.format(user_dict['email']))
-    user_followers = cursor.fetchall()
-    cursor.execute('''select f.followee from Follow f where f.follower = '{}' '''.format(user_dict['email']))
-    user_following = cursor.fetchall()
-    cursor.execute(''' select s.thread from Subscribe s where s.user='{}' '''.format(user_dict['email']))
-    user_subscriptions = cursor.fetchall()
+        cursor.execute('''select f.follower from Follow f where f.followee = '{}' '''.format(one_dict['email']))
+        user_followers = cursor.fetchall()
+        cursor.execute('''select f.followee from Follow f where f.follower = '{}' '''.format(one_dict['email']))
+        user_following = cursor.fetchall()
+        cursor.execute(''' select s.thread from Subscribe s where s.user='{}' '''.format(one_dict['email']))
+        user_subscriptions = cursor.fetchall()
 
-    user_dict['followers'] = [email[0] for email in user_followers]
-    user_dict['following'] = [email[0] for email in user_following]
-    user_dict['subscriptions'] = [subs[0] for subs in user_subscriptions]
+        one_dict['followers'] = [email[0] for email in user_followers]
+        one_dict['following'] = [email[0] for email in user_following]
+        one_dict['subscriptions'] = [subs[0] for subs in user_subscriptions]
     return user_dict
 
 
@@ -104,6 +105,22 @@ def fix_forum_dict(cursor, related):
     if 'user' in related:
         user = forum_dict['user']
         cursor.execute(''' select * from User u where u.email='{}' '''.format(user))
-        user_dict = fix_user_dict(cursor)
+        user_dict = fix_user_dict(cursor)[0]
         forum_dict['user'] = user_dict
     return forum_dict
+
+
+def check_limit(limit):
+    if limit:
+        return 'limit {}'.format(limit)
+    else:
+        return ''
+
+
+def check_since(since):
+    if since:
+        return ''' and date > '{}' '''.format(since)
+    else:
+        return ''
+
+

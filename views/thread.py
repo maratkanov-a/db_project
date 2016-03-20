@@ -1,7 +1,7 @@
 import json
 import MySQLdb
 from flask import Blueprint, request
-from response_json import response, connection, fix_post_dict, fix_thread_dict
+from response_json import *
 
 thread = Blueprint("thread", __name__)
 
@@ -120,23 +120,22 @@ def list_threads():
     user_email = request.args.get("user", default=None)
     forum_name = request.args.get("forum", default=None)
 
-    since = request.args.get("since", type=str, default='1981-01-01 00:00:00')
+    since = request.args.get("since", type=str, default=None)
     limit = request.args.get("limit", type=int, default=None)
     order = request.args.get("order", default='desc')
 
     if order not in ['asc', 'desc']:
         return response(3, 'Wrong order value')
 
-    if limit:
-        limit_str = 'limit {}'.format(limit)
-    else:
-        limit_str = ''
+    limit_str = check_limit(limit)
+
+    since_str = check_since(since)
 
     if user_email:
 
         c, conn = connection()
         try:
-            c.execute(''' select * from Thread t where t.user='{}' and t.date > '{}' order by t.date {} {} '''.format(user_email, since, order, limit_str))
+            c.execute(''' select * from Thread t where t.user='{}' {} order by t.date {} {} '''.format(user_email, since_str, order, limit_str))
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(1, 'Not Found')
@@ -151,7 +150,7 @@ def list_threads():
 
         c, conn = connection()
         try:
-            c.execute(''' select * from Thread t where t.forum='{}' and t.date > '{}' order by t.date {} {} '''.format(forum_name, since, order, limit_str))
+            c.execute(''' select * from Thread t where t.forum='{}' and t.date > '{}' order by t.date {} {} '''.format(forum_name, since_str, order, limit_str))
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(1, 'Not Found')
@@ -165,7 +164,7 @@ def list_threads():
 
         c, conn = connection()
         try:
-            c.execute(''' select * from Thread t where t.user='{}' and t.forum='{}' and t.date > '{}' order by t.date {} {} '''.format(user_email, forum_name, since, order, limit_str))
+            c.execute(''' select * from Thread t where t.user='{}' and t.forum='{}' and t.date > '{}' order by t.date {} {} '''.format(user_email, forum_name, since_str, order, limit_str))
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(1, 'Not Found')
@@ -185,7 +184,7 @@ def list_posts_threads():
     thread_id = request.args.get("thread", type=int, default=None)
     sort = request.args.get("sort", type=str, default='flat')
     order = request.args.get("order", default='desc')
-    since = request.args.get("since", type=str, default='1981-01-01 00:00:00')
+    since = request.args.get("since", type=str, default=None)
     limit = request.args.get("limit", type=int, default=None)
 
     if sort not in ['flat', 'tree', 'parent_tree']:
@@ -201,21 +200,20 @@ def list_posts_threads():
     if order not in ['asc', 'desc']:
         return response(3, 'Wrong order value')
 
-    if limit:
-        limit_str = 'limit {}'.format(limit)
-    else:
-        limit_str = ''
+    limit_str = check_limit(limit)
+
+    since_str = check_since(since)
 
     if thread_id:
 
         c, conn = connection()
         try:
-            c.execute(''' select * from Post p where p.thread={} and p.date>'{}' {} {} '''.format(thread_id, since, sort_str, limit_str))
+            c.execute(''' select * from Post p where p.thread={} {} {} {} '''.format(thread_id, since_str, sort_str, limit_str))
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(1, 'Not Found')
 
-        res = fix_post_dict(c)
+        res = fix_post_dict(c, [])
 
         conn.close()
 

@@ -1,31 +1,8 @@
 import json
 import MySQLdb
 from flask import Blueprint, request
-from views.response_json import response, connection, dictfetchall, true_or_false, fix_user_dict, fix_post_dict
+from views.response_json import *
 
-
-def list_posts(cursor):
-    posts_list = []
-    for one_el in cursor.fetchall():
-        posts_dict = {
-            'data': str(one_el[4]),
-            'dislikes': one_el[6],
-            'forum': one_el[1],
-            'id': one_el[0],
-            'isApproved': true_or_false(one_el[12]),
-            'isDeleted': true_or_false(one_el[15]),
-            'isEdited': true_or_false(one_el[14]),
-            'isHighlighted': true_or_false(one_el[11]),
-            'isSpam': true_or_false(one_el[13]),
-            'likes': one_el[7],
-            'message': one_el[5],
-            'parent': one_el[9],
-            'points': one_el[8],
-            'thread': one_el[1],
-            'user': one_el[2]
-        }
-        posts_list.append(posts_dict)
-    return posts_list
 
 user = Blueprint("user", __name__)
 
@@ -82,11 +59,11 @@ def details():
 
         users_tuple = c.fetchall()
 
-        res = fix_user_dict(c, users_tuple[0])
+        res = fix_user_dict(c)
 
         conn.close()
 
-        return response(0, res)
+        return response(0, res[0])
     else:
         return response(2, 'Invalid request')
 
@@ -116,7 +93,7 @@ def follow():
 
         conn.close()
 
-        return response(0, res)
+        return response(0, res[0])
     else:
         return response(2, 'Invalid request')
 
@@ -130,12 +107,9 @@ def list_followers():
 
         limit = request.args.get("limit", type=int, default=None)
 
-        if limit:
-            limit_str = 'limit {}'.format(limit)
-        else:
-            limit_str = ''
-
         order = request.args.get("order", default='desc')
+
+        limit_str = check_limit(limit)
 
         if order not in ['asc', 'desc']:
             return response(3, 'Wrong order value')
@@ -174,10 +148,7 @@ def list_following():
 
         limit = request.args.get("limit", type=int, default=None)
 
-        if limit:
-            limit_str = 'limit {}'.format(limit)
-        else:
-            limit_str = ''
+        limit_str = check_limit(limit)
 
         order = request.args.get("order", default='desc')
 
@@ -215,14 +186,13 @@ def list_posts_users():
 
     if user_email:
 
-        since = request.args.get("since", type=str, default='1981-01-01 00:00:00')
+        since = request.args.get("since", type=str, default=None)
 
         limit = request.args.get("limit", type=int, default=None)
 
-        if limit:
-            limit_str = 'limit {}'.format(limit)
-        else:
-            limit_str = ''
+        limit_str = check_limit(limit)
+
+        since_str = check_since(since)
 
         order = request.args.get("order", default='desc')
 
@@ -232,12 +202,12 @@ def list_posts_users():
         c, conn = connection()
 
         try:
-            c.execute(''' select * from Post p where p.user = '{}' and p.date > '{}' order by p.date {} {} '''.format(user_email, since, order, limit_str))
+            c.execute(''' select * from Post p where p.user = '{}' {} order by p.date {} {} '''.format(user_email, since_str, order, limit_str))
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(1, 'Not Found')
 
-        res = fix_post_dict(c)
+        res = fix_post_dict(c, [])
 
         conn.close()
 
@@ -270,7 +240,7 @@ def unfollow():
 
         conn.close()
 
-        return response(0, res)
+        return response(0, res[0])
     else:
         return response(2, 'Invalid request')
 
@@ -299,6 +269,6 @@ def update_user():
 
         conn.close()
 
-        return response(0, res)
+        return response(0, res[0])
     else:
         return response(2, 'Invalid request')
