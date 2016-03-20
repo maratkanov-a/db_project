@@ -75,10 +75,9 @@ def create():
 def details():
 
     post_id = request.args.get("post", type=int, default=None)
+    related = request.args.getlist('related', type=str)
 
     if post_id:
-        # WTF!!!!!!!!!!!!!!!!!!
-        related = request.args.getlist('related')
 
         c, conn = connection()
 
@@ -88,7 +87,7 @@ def details():
             conn.close()
             return response(1, 'Not Found')
 
-        res = fix_post_dict(c)
+        res = fix_post_dict(c, related)
 
         conn.close()
 
@@ -111,14 +110,16 @@ def list_posts():
     if order not in ['asc', 'desc']:
         return response(3, 'Wrong order value')
 
-    if not limit:
-        limit = 18446744073709551615
+    if limit:
+        limit_str = 'limit {}'.format(limit)
+    else:
+        limit_str = ''
 
     if thread_id:
 
         c, conn = connection()
         try:
-            c.execute(''' select * from Post p where p.thread='{}' and p.date > '{}' order by p.date {} limit {} '''.format(thread_id, since, order, limit))
+            c.execute(''' select * from Post p where p.thread='{}' and p.date > '{}' order by p.date {} {} '''.format(thread_id, since, order, limit_str))
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(1, 'Not Found')
@@ -133,7 +134,7 @@ def list_posts():
 
         c, conn = connection()
         try:
-            c.execute(''' select * from Post p where p.forum='{}' and p.date > '{}' order by p.date {} limit {} '''.format(forum_name, since, order, limit))
+            c.execute(''' select * from Post p where p.forum='{}' and p.date > '{}' order by p.date {} {} '''.format(forum_name, since, order, limit_str))
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(1, 'Not Found')
@@ -148,7 +149,7 @@ def list_posts():
 
         c, conn = connection()
         try:
-            c.execute(''' select * from Post p where p.thread='{}' and p.forum='{}' and t.date > '{}' order by t.date {} limit {} '''.format(thread_id, forum_name, since, order, limit))
+            c.execute(''' select * from Post p where p.thread='{}' and p.forum='{}' and t.date > '{}' order by t.date {} {} '''.format(thread_id, forum_name, since, order, limit_str))
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(1, 'Not Found')

@@ -1,7 +1,7 @@
 import json
 import MySQLdb
 from flask import Blueprint, request
-from response_json import response, connection, dictfetchall, true_or_false, fix_post_dict, fix_thread_dict
+from response_json import response, connection, fix_post_dict, fix_thread_dict
 
 thread = Blueprint("thread", __name__)
 
@@ -128,14 +128,16 @@ def list_threads():
     if order not in ['asc', 'desc']:
         return response(3, 'Wrong order value')
 
-    if not limit:
-        limit = 18446744073709551615
+    if limit:
+        limit_str = 'limit {}'.format(limit)
+    else:
+        limit_str = ''
 
     if user_email:
 
         c, conn = connection()
         try:
-            c.execute(''' select * from Thread t where t.user='{}' and t.date > '{}' order by t.date {} limit {} '''.format(user_email, since, order, limit))
+            c.execute(''' select * from Thread t where t.user='{}' and t.date > '{}' order by t.date {} {} '''.format(user_email, since, order, limit_str))
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(1, 'Not Found')
@@ -150,7 +152,7 @@ def list_threads():
 
         c, conn = connection()
         try:
-            c.execute(''' select * from Thread t where t.forum='{}' and t.date > '{}' order by t.date {} limit {} '''.format(forum_name, since, order, limit))
+            c.execute(''' select * from Thread t where t.forum='{}' and t.date > '{}' order by t.date {} {} '''.format(forum_name, since, order, limit_str))
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(1, 'Not Found')
@@ -164,7 +166,7 @@ def list_threads():
 
         c, conn = connection()
         try:
-            c.execute(''' select * from Thread t where t.user='{}' and t.forum='{}' and t.date > '{}' order by t.date {} limit {} '''.format(user_email, forum_name, since, order, limit))
+            c.execute(''' select * from Thread t where t.user='{}' and t.forum='{}' and t.date > '{}' order by t.date {} {} '''.format(user_email, forum_name, since, order, limit_str))
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(1, 'Not Found')
@@ -200,14 +202,16 @@ def list_posts_threads():
     if order not in ['asc', 'desc']:
         return response(3, 'Wrong order value')
 
-    if not limit:
-            limit = 18446744073709551615
+    if limit:
+        limit_str = 'limit {}'.format(limit)
+    else:
+        limit_str = ''
 
     if thread_id:
 
         c, conn = connection()
         try:
-            c.execute(''' select * from Post p where p.thread={} and p.date>'{}' {} limit {} '''.format(thread_id, since, sort_str, limit))
+            c.execute(''' select * from Post p where p.thread={} and p.date>'{}' {} {} '''.format(thread_id, since, sort_str, limit_str))
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(1, 'Not Found')

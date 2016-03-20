@@ -1,36 +1,7 @@
 import json
 import MySQLdb
 from flask import Blueprint, request
-from views.response_json import response, connection,dictfetchall
-
-
-def true_or_false(what):
-    if what == 0:
-        return False
-    else:
-        return True
-
-
-def user_tuple_to_dict(cursor, user):
-    user_dict = {
-        'email': user[2],
-        'about': user[3],
-        'username': user[1],
-        'id': user[0],
-        'name': user[4],
-        'isAnonymous': true_or_false(user[5])
-    }
-    cursor.execute('''select f.follower from Follow f where f.followee = '{}' '''.format(user[2]))
-    user_followers = cursor.fetchall()
-    cursor.execute('''select f.followee from Follow f where f.follower = '{}' '''.format(user[2]))
-    user_following = cursor.fetchall()
-    cursor.execute(''' select s.thread from Subscribe s where s.user='{}' '''.format(user[2]))
-    user_subscribtions = cursor.fetchall()
-
-    user_dict['followers'] = [email[0] for email in user_followers]
-    user_dict['following'] = [email[0] for email in user_following]
-    user_dict['subscriptions'] = [subs[0] for subs in user_subscribtions]
-    return user_dict
+from views.response_json import response, connection, dictfetchall, true_or_false, fix_user_dict, fix_post_dict
 
 
 def list_posts(cursor):
@@ -111,7 +82,7 @@ def details():
 
         users_tuple = c.fetchall()
 
-        res = user_tuple_to_dict(c, users_tuple[0])
+        res = fix_user_dict(c, users_tuple[0])
 
         conn.close()
 
@@ -141,9 +112,7 @@ def follow():
             conn.close()
             return response(1, 'Not Found')
 
-        follow_tuple = c.fetchall()
-
-        res = user_tuple_to_dict(c, follow_tuple[0])
+        res = fix_user_dict(c)
 
         conn.close()
 
@@ -161,24 +130,28 @@ def list_followers():
 
         limit = request.args.get("limit", type=int, default=None)
 
-        if not limit:
-            limit = 18446744073709551615
+        if limit:
+            limit_str = 'limit {}'.format(limit)
+        else:
+            limit_str = ''
 
         order = request.args.get("order", default='desc')
 
         if order not in ['asc', 'desc']:
             return response(3, 'Wrong order value')
 
-        since_id = request.args.get('since_id', type=list, default=None)
-        since_id_list = [0, 18446744073709551615]
+        since_id = request.args.get('since_id', type=str, default=None)
 
         if since_id:
             since_id_list = map(int, since_id.rstrip(']').lstrip('[').split(','))
+            since_id_str = ''' and u.id >= '{}' and u.id <= '{}' '''.format(since_id_list[0], since_id_list[1])
+        else:
+            since_id_str = ''
 
         c, conn = connection()
 
         try:
-            c.execute(''' select * from Follow f join User u on f.follower = u.email where f.followee='{}' and u.id >= '{}' and u.id <= '{}' order by u.name {} limit {} '''.format(user_email, since_id_list[0], since_id_list[1], order, limit))
+            c.execute(''' select * from Follow f join User u on f.follower = u.email where f.followee='{}' {} order by u.name {} {} '''.format(user_email, since_id_str, order, limit_str))
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(1, 'Not Found')
@@ -201,24 +174,28 @@ def list_following():
 
         limit = request.args.get("limit", type=int, default=None)
 
-        if not limit:
-            limit = 18446744073709551615
+        if limit:
+            limit_str = 'limit {}'.format(limit)
+        else:
+            limit_str = ''
 
         order = request.args.get("order", default='desc')
 
         if order not in ['asc', 'desc']:
             return response(3, 'Wrong order value')
 
-        since_id = request.args.get('since_id', type=list, default=None)
-        since_id_list = [0, 18446744073709551615]
+        since_id = request.args.get('since_id', type=str, default=None)
 
         if since_id:
             since_id_list = map(int, since_id.rstrip(']').lstrip('[').split(','))
+            since_id_str = ''' and u.id >= '{}' and u.id <= '{}' '''.format(since_id_list[0], since_id_list[1])
+        else:
+            since_id_str = ''
 
         c, conn = connection()
 
         try:
-            c.execute(''' select * from Follow f join User u on f.followee = u.email where f.follower='{}' and u.id >= '{}' and u.id <= '{}' order by u.name {} limit {} '''.format(user_email, since_id_list[0], since_id_list[1], order, limit))
+            c.execute(''' select * from Follow f join User u on f.followee = u.email where f.follower='{}' {} order by u.name {} {} '''.format(user_email, since_id_str, order, limit_str))
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(1, 'Not Found')
@@ -242,8 +219,10 @@ def list_posts_users():
 
         limit = request.args.get("limit", type=int, default=None)
 
-        if not limit:
-            limit = 18446744073709551615
+        if limit:
+            limit_str = 'limit {}'.format(limit)
+        else:
+            limit_str = ''
 
         order = request.args.get("order", default='desc')
 
@@ -253,12 +232,12 @@ def list_posts_users():
         c, conn = connection()
 
         try:
-            c.execute(''' select * from Post p where p.user = '{}' and p.date > '{}' order by p.date {} limit {} '''.format(user_email, since, order, limit))
+            c.execute(''' select * from Post p where p.user = '{}' and p.date > '{}' order by p.date {} {} '''.format(user_email, since, order, limit_str))
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(1, 'Not Found')
 
-        res = list_posts(c)
+        res = fix_post_dict(c)
 
         conn.close()
 
@@ -287,9 +266,7 @@ def unfollow():
             conn.close()
             return response(1, 'Not Found')
 
-        follow_tuple = c.fetchall()
-
-        res = user_tuple_to_dict(c, follow_tuple[0])
+        res = fix_user_dict(c)
 
         conn.close()
 
@@ -318,9 +295,7 @@ def update_user():
             conn.close()
             return response(1, 'Not Found')
 
-        user_tuple = c.fetchall()
-
-        res = user_tuple_to_dict(c, user_tuple[0])
+        res = fix_user_dict(c)
 
         conn.close()
 
