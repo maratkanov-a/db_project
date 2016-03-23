@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import json
 import MySQLdb
 from flask import Blueprint, request
@@ -6,7 +7,7 @@ from response_json import *
 thread = Blueprint("thread", __name__)
 
 
-@thread.route("/close", methods=['POST'])
+@thread.route("/close/", methods=['POST'])
 def close():
 
     params = json.loads(request.data)
@@ -31,22 +32,20 @@ def close():
         return response(2, 'Invalid request')
 
 
-@thread.route("/create", methods=['POST'])
+@thread.route("/create/", methods=['POST'])
 def create():
 
     params = json.loads(request.data)
 
-    if params['forum'] and params['title'] and params['isClosed'] and params['user'] and params['date'] and params[
+    if params['forum'] and params['title'] and str(params['isClosed']) and params['user'] and params['date'] and params[
         'message'] and params['slug']:
 
         if not params.get('isDeleted', None):
             params['isDeleted'] = 0
-            is_deleted = False
         else:
             params['isDeleted'] = 1
-            is_deleted = True
 
-        if params.get('isClosed', None) == 'true':
+        if params.get('isClosed', None):
             is_closed = 1
         else:
             is_closed = 0
@@ -54,38 +53,30 @@ def create():
         c, conn = connection()
         try:
             c.execute(
-            '''insert into `Thread` (`forum`, `title`, `user`, `date`, `message`, `slug`, `isDeleted`, `isClosed`, `dislikes`, `likes`, `points`, `posts`) values ('{}', '{}','{}','{}','{}','{}','{}','{}','{}','{}','{}','{}') '''.format(
-                params['forum'], params['title'], params['user'], params['date'], params['message'], params['slug'], params['isDeleted'],
-                is_closed, 0, 0, 0, 0))
+            '''insert into `Thread` (`forum`, `title`, `user`, `date`, `message`, `slug`, `isDeleted`, `isClosed`) values ('{}', '{}','{}','{}','{}','{}','{}','{}') '''.format(
+                params['forum'], params['title'].encode("utf8"), params['user'], params['date'], params['message'].encode("utf8"), params['slug'].encode("utf8"), params['isDeleted'],
+                is_closed))
+            conn.commit()
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(4, 'Unknown error')
 
         try:
-            c.execute(''' select id from Thread t where t.date='{}' '''.format(params['date']))
+            c.execute(''' select * from Thread t where t.date='{}' '''.format(params['date']))
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(1, 'Not Found')
 
-        res = c.fetchall()
+        res = fix_thread_dict(c, [])[0]
 
-        thread_id = res[0][0]
-
-        response_dict = {
-            'date': params['date'],
-            'forum': params['forum'],
-            'id': thread_id,
-            'isClosed': params['isClosed'],
-            "isDeleted": is_deleted,
-            'message': params['message'],
-            'slug': params['slug'],
-            'title': params['title'],
-            'user': params['user'],
-        }
+        res.pop("likes", None)
+        res.pop("dislikes", None)
+        res.pop("points", None)
+        res.pop("posts", None)
 
         conn.close()
 
-        return response(0, response_dict)
+        return response(0, res)
     else:
         return response(2, 'Invalid request')
 
@@ -94,9 +85,12 @@ def create():
 def details():
 
     thread_id = request.args.get("thread", type=int, default=None)
+    related = request.args.getlist('related', type=str)
+
+    if len([item for item in related if item not in ['user', 'forum']]) > 0:
+        return response(3, "Incorrect request")
 
     if thread_id:
-        related = request.args.getlist('related')
 
         c, conn = connection()
         try:
@@ -109,7 +103,7 @@ def details():
 
         conn.close()
 
-        return response(0, res)
+        return response(0, res[0])
     else:
         return response(2, 'Invalid request')
 
@@ -150,7 +144,7 @@ def list_threads():
 
         c, conn = connection()
         try:
-            c.execute(''' select * from Thread t where t.forum='{}' and t.date > '{}' order by t.date {} {} '''.format(forum_name, since_str, order, limit_str))
+            c.execute(''' select * from Thread t where t.forum='{}' {} order by t.date {} {} '''.format(forum_name, since_str, order, limit_str))
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(1, 'Not Found')
@@ -164,7 +158,7 @@ def list_threads():
 
         c, conn = connection()
         try:
-            c.execute(''' select * from Thread t where t.user='{}' and t.forum='{}' and t.date > '{}' order by t.date {} {} '''.format(user_email, forum_name, since_str, order, limit_str))
+            c.execute(''' select * from Thread t where t.user='{}' and t.forum='{}' {} order by t.date {} {} '''.format(user_email, forum_name, since_str, order, limit_str))
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(1, 'Not Found')
@@ -222,7 +216,7 @@ def list_posts_threads():
         return response(2, 'Invalid request')
 
 
-@thread.route("/open", methods=['POST'])
+@thread.route("/open/", methods=['POST'])
 def open():
 
     params = json.loads(request.data)
@@ -232,6 +226,7 @@ def open():
         c, conn = connection()
         try:
             c.execute(''' update Thread t set isClosed=0 where t.id={} '''.format(params['thread']))
+            conn.commit()
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(4, 'Unknown error')
@@ -247,7 +242,7 @@ def open():
         return response(2, 'Invalid request')
 
 
-@thread.route("/remove", methods=['POST'])
+@thread.route("/remove/", methods=['POST'])
 def remove():
     params = json.loads(request.data)
 
@@ -255,8 +250,18 @@ def remove():
 
         c, conn = connection()
         try:
-            c.execute(''' update Thread t set isDeleted=1 where t.id={} '''.format(params['thread']))
+            c.execute(''' select count(*) from post where thread={} '''.format(params['thread']))
+            conn.commit()
+        except (MySQLdb.Error, MySQLdb.Warning):
+            conn.close()
+            return response(4, 'Unknown error')
+
+        count_posts = c.fetchall()[0][0]
+
+        try:
+            c.execute(''' update Thread t set isDeleted=1, posts={} where t.id={} '''.format(count_posts, params['thread']))
             c.execute(''' update Post p set isDeleted=1 where p.thread={} '''.format(params['thread']))
+            conn.commit()
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(4, 'Unknown error')
@@ -272,7 +277,7 @@ def remove():
         return response(2, 'Invalid request')
 
 
-@thread.route("/restore", methods=['POST'])
+@thread.route("/restore/", methods=['POST'])
 def restore():
 
     params = json.loads(request.data)
@@ -280,9 +285,20 @@ def restore():
     if params['thread']:
 
         c, conn = connection()
+
         try:
-            c.execute(''' update Thread t set isDeleted=0 where t.id={} '''.format(params['thread']))
+            c.execute(''' select count(*) from post where thread={} '''.format(params['thread']))
+            conn.commit()
+        except (MySQLdb.Error, MySQLdb.Warning):
+            conn.close()
+            return response(4, 'Unknown error')
+
+        count_posts = c.fetchall()[0][0]
+
+        try:
+            c.execute(''' update Thread t set isDeleted=0, posts={} where t.id={} '''.format(count_posts, params['thread']))
             c.execute(''' update Post p set isDeleted=0 where p.thread={} '''.format(params['thread']))
+            conn.commit()
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(4, 'Unknown error')
@@ -298,7 +314,7 @@ def restore():
         return response(2, 'Invalid request')
 
 
-@thread.route("/subscribe", methods=['POST'])
+@thread.route("/subscribe/", methods=['POST'])
 def subscribe():
 
     params = json.loads(request.data)
@@ -308,6 +324,7 @@ def subscribe():
         c, conn = connection()
         try:
             c.execute(''' insert into `Subscribe` (`thread`, `user`) values ('{}', '{}') '''.format(params['thread'], params['user']))
+            conn.commit()
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(4, 'Unknown error')
@@ -324,7 +341,7 @@ def subscribe():
         return response(2, 'Invalid request')
 
 
-@thread.route("/unsubscribe", methods=['POST'])
+@thread.route("/unsubscribe/", methods=['POST'])
 def unsubscribe():
     params = json.loads(request.data)
 
@@ -333,6 +350,7 @@ def unsubscribe():
         c, conn = connection()
         try:
             c.execute(''' delete from Subscribe where thread={} and user='{}' '''.format(params['thread'], params['user']))
+            conn.commit()
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(4, 'Unknown error')
@@ -349,7 +367,7 @@ def unsubscribe():
         return response(2, 'Invalid request')
 
 
-@thread.route("/update", methods=['POST'])
+@thread.route("/update/", methods=['POST'])
 def update():
     params = json.loads(request.data)
 
@@ -357,20 +375,21 @@ def update():
 
         c, conn = connection()
         try:
-            c.execute(''' update Thread t set message='{}', slug='{}' where t.id={} '''.format(params['message'], params['slug'], params['thread']))
+            c.execute(''' update Thread t set t.message='{}', t.slug='{}' where t.id={} '''.format(params['message'], params['slug'], params['thread']))
             c.execute(''' select * from Thread t where t.id={} '''.format(params['thread']))
+            conn.commit()
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(1, 'Not Found')
 
         res = fix_thread_dict(c, [])
 
-        return response(0, res)
+        return response(0, res[0])
     else:
         return response(2, 'Invalid request')
 
 
-@thread.route("/vote", methods=['POST'])
+@thread.route("/vote/", methods=['POST'])
 def vote():
 
     params = json.loads(request.data)
@@ -383,9 +402,10 @@ def vote():
         c, conn = connection()
         try:
             if params['vote'] == -1:
-                c.execute(''' update Thread t set dislikes=dislikes+1 where t.id={} '''.format(params['thread']))
+                c.execute(''' update Thread t set dislikes=dislikes+1, points=points-1 where t.id={} '''.format(params['thread']))
             else:
-                c.execute(''' update Thread t set likes=likes+1 where t.id={} '''.format(params['thread']))
+                c.execute(''' update Thread t set likes=likes+1, points=points+1 where t.id={} '''.format(params['thread']))
+            conn.commit()
 
             c.execute(''' select * from Thread t where t.id={} '''.format(params['thread']))
         except (MySQLdb.Error, MySQLdb.Warning):
@@ -394,6 +414,6 @@ def vote():
 
         res = fix_thread_dict(c, [])
 
-        return response(0, res)
+        return response(0, res[0])
     else:
         return response(2, 'Invalid request')

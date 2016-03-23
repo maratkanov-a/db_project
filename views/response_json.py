@@ -1,6 +1,7 @@
 import json
 import MySQLdb
 import itertools
+from flask import jsonify, make_response
 
 
 def connection():
@@ -14,8 +15,10 @@ def connection():
 
 
 def response(status, answer):
-    resp_dict = {'code': status, 'response': answer}
-    return json.dumps(resp_dict)
+    resp_dict = jsonify({'code': status, 'response': answer})
+    resp = make_response(resp_dict)
+    resp.headers['Content-Type'] = "application/json"
+    return resp
 
 
 def true_or_false(what):
@@ -53,7 +56,7 @@ def fix_post_dict(cursor, related):
                 forum_dict = fix_forum_dict(cursor, [])
                 one_dict['forum'] = forum_dict
 
-        if 'thread' in related and cursor.execute('''select * from Thread t where t.user='{}' '''.format(user)):
+        if 'thread' in related and cursor.execute('''select * from Thread t where t.id={} '''.format(one_dict['thread'])):
             thread_dict = fix_thread_dict(cursor, [])
             one_dict['thread'] = thread_dict[0]
 
@@ -87,6 +90,10 @@ def fix_user_dict(cursor):
     for one_dict in user_dict:
         one_dict['isAnonymous'] = true_or_false(one_dict['isAnonymous'])
 
+        for key, value in one_dict.iteritems():
+            if value == 'None':
+                one_dict[key] = None
+
         cursor.execute('''select f.follower from Follow f where f.followee = '{}' '''.format(one_dict['email']))
         user_followers = cursor.fetchall()
         cursor.execute('''select f.followee from Follow f where f.follower = '{}' '''.format(one_dict['email']))
@@ -105,7 +112,10 @@ def fix_forum_dict(cursor, related):
     if 'user' in related:
         user = forum_dict['user']
         cursor.execute(''' select * from User u where u.email='{}' '''.format(user))
-        user_dict = fix_user_dict(cursor)[0]
+        if cursor.rowcount != 0:
+            user_dict = fix_user_dict(cursor)[0]
+        else:
+            user_dict = user
         forum_dict['user'] = user_dict
     return forum_dict
 

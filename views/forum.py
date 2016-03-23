@@ -7,10 +7,13 @@ from views.response_json import *
 forum = Blueprint("forum", __name__)
 
 
-@forum.route("/create", methods=['POST'])
+@forum.route("/create/", methods=['POST'])
 def create():
 
-    params = json.loads(request.data)
+    try:
+        params = json.loads(request.data)
+    except:
+        return response(2, 'Invalid request')
 
     if params['name'] and params['short_name'] and params['user']:
 
@@ -19,24 +22,25 @@ def create():
         try:
             c.execute(
                 '''insert into `Forum` (`name`, `short_name`, `user`) values ('{}','{}','{}') '''.format(
-                    params['name'], params['short_name'], params['user']))
+                    params['name'].encode("utf8"), params['short_name'], params['user']))
+            conn.commit()
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(4, 'Unknown error')
 
         try:
             c.execute(
-                '''select * from Forum f where f.name='{}' and f.short_name='{}' and f.user='{}' limit 1 '''.format(
-                    params['name'], params['short_name'], params['user']))
+                '''select * from Forum f where f.short_name='{}' '''.format(params['short_name']))
+            conn.commit()
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(1, 'Not found')
 
-        res = dictfetchall(c)
+        res = fix_forum_dict(c, [])
 
         conn.close()
 
-        return response(0, res[0])
+        return response(0, res)
     else:
         return response(2, 'Invalid request')
 
@@ -57,6 +61,9 @@ def details():
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(1, 'Not found')
+
+        if c.rowcount == 0:
+            return response(1, 'Not Found')
 
         res = fix_forum_dict(c, related)
 
@@ -147,10 +154,10 @@ def list_users():
     limit = request.args.get("limit", type=int, default=None)
     order = request.args.get("order", default='desc')
     since_id = request.args.get('since_id', type=str, default=None)
+    # max_id = request.args.get('since_id', type=str, default=None)
 
     if since_id:
-        since_id_list = map(int, since_id.rstrip(']').lstrip('[').split(','))
-        since_id_str = ''' u.id >= '{}' and u.id <= '{}' and '''.format(since_id_list[0], since_id_list[1])
+        since_id_str = ''' u.id >={} and '''.format(since_id)
     else:
         since_id_str = ''
 

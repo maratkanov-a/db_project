@@ -1,10 +1,11 @@
+# -*- coding: utf-8 -*-
 from flask import Blueprint
 from response_json import *
 
 common = Blueprint('common', __name__)
 
 
-@common.route("/clear", methods=['POST'])
+@common.route("/clear/", methods=['POST'])
 def delete_all():
 
     delete_list = ['User', 'Forum', 'Thread', 'Post', 'Follow', 'Subscribe']
@@ -13,7 +14,7 @@ def delete_all():
 
     for el in delete_list:
         try:
-            c.execute(''' delete '{}' from '{}' '''.format(el, el))
+            c.execute(''' delete {} from {} '''.format(el, el))
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(4, 'Unknown error')
@@ -44,3 +45,20 @@ def get_status():
     conn.close()
 
     return response(0, res)
+
+
+@common.route("/drop/", methods=['GET'])
+def drop():
+    delete_list = ['User', 'Forum', 'Thread', 'Post', 'Follow', 'Subscribe']
+
+    c, conn = connection()
+
+    for el in delete_list:
+        try:
+            c.execute(''' drop table {} '''.format(el))
+        except (MySQLdb.Error, MySQLdb.Warning):
+            conn.close()
+            return response(4, 'Unknown error')
+
+    conn.close()
+    return response(0, 'OK')

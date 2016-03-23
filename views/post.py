@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import json
 import MySQLdb
 from flask import Blueprint, request
@@ -6,7 +7,7 @@ from views.response_json import *
 post = Blueprint("post", __name__)
 
 
-@post.route("/create", methods=['POST'])
+@post.route("/create/", methods=['POST'])
 def create():
     params = json.loads(request.data)
 
@@ -66,7 +67,7 @@ def create():
 
         conn.close()
 
-        return response(0, res)
+        return response(0, res[0])
     else:
         return response(2, 'Invalid request')
 
@@ -85,6 +86,9 @@ def details():
             c.execute(''' select * from Post p where p.id='{}' '''.format(post_id))
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
+            return response(1, 'Not Found')
+
+        if c.rowcount == 0:
             return response(1, 'Not Found')
 
         res = fix_post_dict(c, related)
@@ -132,7 +136,7 @@ def list_posts():
 
         c, conn = connection()
         try:
-            c.execute(''' select * from Post p where p.forum='{}' and p.date > '{}' order by p.date {} {} '''.format(forum_name, since_str, order, limit_str))
+            c.execute(''' select * from Post p where p.forum='{}' {} order by p.date {} {} '''.format(forum_name, since_str, order, limit_str))
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(1, 'Not Found')
@@ -147,7 +151,7 @@ def list_posts():
 
         c, conn = connection()
         try:
-            c.execute(''' select * from Post p where p.thread='{}' and p.forum='{}' and t.date > '{}' order by t.date {} {} '''.format(thread_id, forum_name, since_str, order, limit_str))
+            c.execute(''' select * from Post p where p.thread='{}' and p.forum='{}' {} order by t.date {} {} '''.format(thread_id, forum_name, since_str, order, limit_str))
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(1, 'Not Found')
@@ -161,7 +165,7 @@ def list_posts():
         return response(2, 'Invalid request')
 
 
-@post.route("/remove", methods=['POST'])
+@post.route("/remove/", methods=['POST'])
 def remove():
 
     params = json.loads(request.data)
@@ -187,7 +191,7 @@ def remove():
         return response(2, 'Invalid request')
 
 
-@post.route("/restore", methods=['POST'])
+@post.route("/restore/", methods=['POST'])
 def restore():
     params = json.loads(request.data)
 
@@ -211,7 +215,7 @@ def restore():
         return response(2, 'Invalid request')
 
 
-@post.route("/update", methods=['POST'])
+@post.route("/update/", methods=['POST'])
 def update():
     params = json.loads(request.data)
 
@@ -232,7 +236,7 @@ def update():
         return response(2, 'Invalid request')
 
 
-@post.route("/vote", methods=['POST'])
+@post.route("/vote/", methods=['POST'])
 def vote():
     params = json.loads(request.data)
 
@@ -244,9 +248,10 @@ def vote():
         c, conn = connection()
         try:
             if params['vote'] == -1:
-                c.execute(''' update Post p set dislikes=dislikes+1 where p.id={} '''.format(params['post']))
+                c.execute(''' update Post p set dislikes=dislikes+1, points=points-1 where p.id={} '''.format(params['post']))
             else:
-                c.execute(''' update Post p set likes=likes+1 where p.id={} '''.format(params['post']))
+                c.execute(''' update Post p set likes=likes+1, points=points+1 where p.id={} '''.format(params['post']))
+            conn.commit()
 
             c.execute(''' select * from Post p where p.id={} '''.format(params['post']))
         except (MySQLdb.Error, MySQLdb.Warning):
