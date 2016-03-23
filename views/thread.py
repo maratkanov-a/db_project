@@ -187,9 +187,9 @@ def list_posts_threads():
     if sort == 'flat':
         sort_str = 'order by p.date {}'.format(order)
     elif sort == 'tree':
-        sort_str = 'order by p.date {}, p.path '.format(order)
+        sort_str = 'order by p.date desc, path {}'.format(order)
     elif sort == 'parent_tree':
-        sort_str = 'and p.path like order by p.date {}'.format(order)
+        sort_str = '''and p.path like '' order by p.date {} '''.format(order)
 
     if order not in ['asc', 'desc']:
         return response(3, 'Wrong order value')
@@ -201,6 +201,7 @@ def list_posts_threads():
     if thread_id:
 
         c, conn = connection()
+
         try:
             c.execute(''' select * from Post p where p.thread={} {} {} {} '''.format(thread_id, since_str, sort_str, limit_str))
         except (MySQLdb.Error, MySQLdb.Warning):
