@@ -91,7 +91,7 @@ def fix_user_dict(cursor):
         one_dict['isAnonymous'] = true_or_false(one_dict['isAnonymous'])
 
         for key, value in one_dict.iteritems():
-            if value == 'None':
+            if value == '':
                 one_dict[key] = None
 
         cursor.execute('''select f.follower from Follow f where f.followee = '{}' '''.format(one_dict['email']))

@@ -19,6 +19,9 @@ def create():
             params['isAnonymous'] = 0
         else:
             params['isAnonymous'] = 1
+            params['username'] = ''
+            params['about'] = ''
+            params['name'] = ''
 
         c, conn = connection()
         try:
