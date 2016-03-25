@@ -184,17 +184,17 @@ def list_posts_threads():
     if sort not in ['flat', 'tree', 'parent_tree']:
         return response(3, 'Wrong sort value')
 
+    limit_str = check_limit(limit)
+
     if sort == 'flat':
-        sort_str = 'order by p.date {}'.format(order)
+        sort_str = 'order by p.date {} '.format(order) + limit_str
     elif sort == 'tree':
-        sort_str = 'order by p.date desc, path {}'.format(order)
+        sort_str = ''' order by path {} '''.format(order) + limit_str
     elif sort == 'parent_tree':
-        sort_str = '''and p.path like '' order by p.date {} '''.format(order)
+        sort_str = '''order by path '''.format(order)
 
     if order not in ['asc', 'desc']:
         return response(3, 'Wrong order value')
-
-    limit_str = check_limit(limit)
 
     since_str = check_since(since)
 
@@ -203,12 +203,28 @@ def list_posts_threads():
         c, conn = connection()
 
         try:
-            c.execute(''' select * from Post p where p.thread={} {} {} {} '''.format(thread_id, since_str, sort_str, limit_str))
+            c.execute(''' select * from Post p where p.thread={} {} {} '''.format(thread_id, since_str, sort_str))
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(1, 'Not Found')
 
         res = fix_post_dict(c, [])
+
+        if sort == 'parent_tree':
+            limit_counter = 0
+            end_counter = -1
+            for el in res:
+                if el['parent'] is None:
+                    end_counter += 1
+
+                    if end_counter == limit:
+                        break
+
+                    limit_counter += 1
+                else:
+                    limit_counter += 1
+
+            res = res[:limit_counter]
 
         conn.close()
 
