@@ -176,6 +176,9 @@ def remove():
 
         try:
             c.execute(''' update Post p set p.isDeleted=1 where p.id={} '''.format(params['post']))
+            c.execute(''' select thread from Post where id={} '''.format(params['post']))
+            id_thread = c.fetchall()[0][0]
+            c.execute(''' update Thread set posts=posts-1 where id={} '''.format(id_thread))
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(4, 'Unknown error')
@@ -200,6 +203,9 @@ def restore():
 
         try:
             c.execute(''' update Post p set p.isDeleted=0 where p.id={} '''.format(params['post']))
+            c.execute(''' select thread from Post where id={} '''.format(params['post']))
+            id_thread = c.fetchall()[0][0]
+            c.execute(''' update Thread set posts=posts+1 where id={} '''.format(id_thread))
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(4, 'Unknown error')
