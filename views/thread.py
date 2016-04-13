@@ -266,18 +266,10 @@ def remove():
     if params['thread']:
 
         c, conn = connection()
-        try:
-            c.execute(''' select count(*) from post where thread={} and isDeleted != 0 '''.format(params['thread']))
-            conn.commit()
-        except (MySQLdb.Error, MySQLdb.Warning):
-            conn.close()
-            return response(4, 'Unknown error')
-
-        count_posts = c.fetchall()[0][0]
 
         try:
             c.execute(''' update Post set isDeleted=1 where thread={} '''.format(params['thread']))
-            c.execute(''' update Thread set isDeleted=1, posts={} where id={} '''.format(count_posts, params['thread']))
+            c.execute(''' update Thread set isDeleted=1, posts=0 where id={} '''.format(params['thread']))
             conn.commit()
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
