@@ -276,8 +276,8 @@ def remove():
         count_posts = c.fetchall()[0][0]
 
         try:
-            c.execute(''' update Thread set isDeleted=1, posts={} where id={} '''.format(count_posts, params['thread']))
             c.execute(''' update Post set isDeleted=1 where thread={} '''.format(params['thread']))
+            c.execute(''' update Thread set isDeleted=1, posts={} where id={} '''.format(count_posts, params['thread']))
             conn.commit()
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
@@ -313,8 +313,8 @@ def restore():
         count_posts = c.fetchall()[0][0]
 
         try:
-            c.execute(''' update Thread set isDeleted=0, posts={} where id={} '''.format(count_posts, params['thread']))
             c.execute(''' update Post set isDeleted=0 where thread={} '''.format(params['thread']))
+            c.execute(''' update Thread set isDeleted=0, posts={} where id={} '''.format(count_posts, params['thread']))
             conn.commit()
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
