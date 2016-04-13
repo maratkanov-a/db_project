@@ -189,7 +189,7 @@ def list_posts_threads():
     if sort == 'flat':
         sort_str = 'order by p.date {} '.format(order) + limit_str
     elif sort == 'tree':
-        sort_str = ''' order by path {} '''.format(order) + limit_str
+        sort_str = ''' and path like '0.______' order by path {} '''.format(order) + limit_str
     elif sort == 'parent_tree':
         sort_str = '''order by path '''.format(order)
 
