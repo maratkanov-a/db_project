@@ -277,7 +277,7 @@ def remove():
 
         try:
             c.execute(''' update Post set isDeleted=1 where thread={} '''.format(params['thread']))
-            c.execute(''' update Thread set isDeleted=1, posts=0 where id={} '''.format(count_posts, params['thread']))
+            c.execute(''' update Thread set isDeleted=1, posts=0 where id={} '''.format(params['thread']))
             conn.commit()
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
