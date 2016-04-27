@@ -1,3 +1,7 @@
+DROP DATABASE IF EXISTS `db_kek`;
+CREATE DATABASE `db_kek` /*!40100 DEFAULT CHARACTER SET utf8 COLLATE utf8_unicode_ci */;
+USE `db_kek`;
+
 DELIMITER //
 create procedure update_thread(in thread_id INT, isDeleted INT)
 BEGIN
