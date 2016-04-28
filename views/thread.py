@@ -303,6 +303,7 @@ def restore():
             return response(4, 'Unknown error')
 
         count_posts = c.fetchall()[0][0]
+        print(count_posts)
 
         try:
             c.execute(''' update Post set isDeleted=0 where thread={} '''.format(params['thread']))
