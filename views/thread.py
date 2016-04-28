@@ -296,7 +296,7 @@ def restore():
         c, conn = connection()
 
         try:
-            c.execute(''' select count(*) from post where thread={} '''.format(params['thread']))
+            c.execute(''' select count(*) from Post where thread={} '''.format(params['thread']))
             conn.commit()
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
