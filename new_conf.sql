@@ -56,7 +56,7 @@ DROP TABLE IF EXISTS `thread`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `thread` (
-  `od` int(11) unsigned NOT NULL AUTO_INCREMENT,
+  `id` int(11) unsigned NOT NULL AUTO_INCREMENT,
   `isDeleted` tinyint(1) unsigned NOT NULL DEFAULT '0',
   `forum` char(40) CHARACTER SET utf8 NOT NULL,
   `isClosed` tinyint(1) unsigned NOT NULL,
