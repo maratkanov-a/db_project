@@ -13,55 +13,27 @@ def create():
 
     if params['date'] and params['thread'] and params['message'] and params['user'] and params['forum']:
 
-        if not params.get('isApproved', None):
-            params['isApproved'] = 0
-        else:
-            params['isApproved'] = 1
+        is_approved = params.get('isHighlighted', False)
+        is_highlighted = params.get('isHighlighted', False)
+        is_edited = params.get('isEdited', False)
+        is_spam = params.get('isSpam', False)
+        is_deleted = params.get('isHighlighted', False)
 
-        if not params.get('isHighlighted', None):
-            params['isHighlighted'] = 0
-        else:
-            params['isHighlighted'] = 1
-
-        if not params.get('isEdited', None):
-            params['isEdited'] = 0
-        else:
-            params['isEdited'] = 1
-
-        if not params.get('isSpam', None):
-            params['isSpam'] = 0
-        else:
-            params['isSpam'] = 1
-
-        if not params.get('isDeleted', None):
-            params['isDeleted'] = 0
-        else:
-            params['isDeleted'] = 1
+        if not params.get('parent', None):
+            params['parent'] = 'Null'
 
         c, conn = connection()
 
         try:
-            if not params.get('parent', None):
-                c.execute(
-                    ''' insert into `Post` (`thread`, `user`, `forum`, `date`, `message`, `dislikes`, `likes`, `points`, `parent`, `isHighlighted`, `isApproved`, `isEdited`, `isSpam`, `isDeleted`) values ('{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', NULL, '{}', '{}', '{}', '{}', '{}') '''.format(
-                        params['thread'], params['user'], params['forum'], params['date'], params['message'], 0, 0, 0,
-                        params['isHighlighted'], params['isApproved'], params['isEdited'],
-                        params['isSpam'], params['isDeleted']))
-            else:
-                c.execute(
-                    ''' insert into `Post` (`thread`, `user`, `forum`, `date`, `message`, `dislikes`, `likes`, `points`, `parent`, `isHighlighted`, `isApproved`, `isEdited`, `isSpam`, `isDeleted`) values ('{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}') '''.format(
-                        params['thread'], params['user'], params['forum'], params['date'], params['message'], 0, 0, 0,
-                        params['parent'], params['isHighlighted'], params['isApproved'], params['isEdited'],
-                        params['isSpam'], params['isDeleted']))
+            c.execute(
+                ''' insert into `Post` (`thread`, `user`, `forum`, `date`, `message`, `dislikes`, `likes`, `points`, `parent`, `isHighlighted`, `isApproved`, `isEdited`, `isSpam`, `isDeleted`) values ('{}', '{}', '{}', '{}', '{}', '{}', '{}', '{}', {}, {}, {}, {}, {}, {}) '''.format(
+                    params['thread'], params['user'], params['forum'], params['date'], params['message'], 0, 0, 0,
+                    params['parent'], is_highlighted, is_approved, is_edited, is_spam, is_deleted))
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(4, 'Unknown error')
 
-        try:
-            c.execute(''' select * from Post p where p.date='{}' '''.format(params['date']))
-        except (MySQLdb.Error, MySQLdb.Warning):
-            conn.close()
-            return response(1, 'Not Found')
+        c.execute(''' select * from Post p where p.date='{}' '''.format(params['date']))
 
         res = fix_post_dict(c, [])
 
@@ -137,21 +109,6 @@ def list_posts():
         c, conn = connection()
         try:
             c.execute(''' select * from Post p where p.forum='{}' {} order by p.date {} {} '''.format(forum_name, since_str, order, limit_str))
-        except (MySQLdb.Error, MySQLdb.Warning):
-            conn.close()
-            return response(1, 'Not Found')
-
-        res = fix_post_dict(c, [])
-
-        conn.close()
-
-        return response(0, res)
-
-    elif forum_name and thread_id:
-
-        c, conn = connection()
-        try:
-            c.execute(''' select * from Post p where p.thread='{}' and p.forum='{}' {} order by t.date {} {} '''.format(thread_id, forum_name, since_str, order, limit_str))
         except (MySQLdb.Error, MySQLdb.Warning):
             conn.close()
             return response(1, 'Not Found')
